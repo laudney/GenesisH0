@@ -53,7 +53,7 @@ def get_difficulty(algorithm):
   if algorithm == "scrypt":
     return 0x1e0ffff0, 0x0ffff0 * 2**(8*(0x1e - 3))
   elif algorithm == "SHA256":
-    return 0x1d00ffff, 0x00ffff * 2**(8*(0x1d - 3)) 
+    return 0x1e0fffff, 2**236 - 1
   elif algorithm == "X11" or algorithm == "X13" or algorithm == "X15":
     return 0x1e0ffff0, 0x0ffff0 * 2**(8*(0x1e - 3))
 
@@ -62,7 +62,7 @@ def create_input_script(psz_timestamp):
   #use OP_PUSHDATA1 if required
   if len(psz_timestamp) > 76: psz_prefix = '4c'
 
-  script_prefix = '04ffff001d0104' + psz_prefix + chr(len(psz_timestamp)).encode('hex')
+  script_prefix = '04ffff0f1e0104' + psz_prefix + chr(len(psz_timestamp)).encode('hex')
   print (script_prefix + psz_timestamp.encode('hex'))
   return (script_prefix + psz_timestamp.encode('hex')).decode('hex')
 
@@ -86,10 +86,11 @@ def create_transaction(input_script, output_script,options):
     Bytes('out_value', 8),
     Byte('output_script_len'),
     Bytes('output_script',  0x43),
-    UBInt32('locktime'))
+    UBInt32('locktime'),
+    Bytes('time', 4))
 
-  tx = transaction.parse('\x00'*(127 + len(input_script)))
-  tx.version           = struct.pack('<I', 1)
+  tx = transaction.parse('\x00'*(131 + len(input_script)))
+  tx.version           = struct.pack('<I', 2)
   tx.num_inputs        = 1
   tx.prev_output       = struct.pack('<qqqq', 0,0,0,0)
   tx.prev_out_idx      = 0xFFFFFFFF
@@ -101,7 +102,8 @@ def create_transaction(input_script, output_script,options):
   #tx.out_value         = struct.pack('<q' ,0x000000012a05f200) #50 coins
   tx.output_script_len = 0x43
   tx.output_script     = output_script
-  tx.locktime          = 0 
+  tx.locktime          = 0
+  tx.time              = struct.pack('<I', 1417019287)
   return transaction.build(tx)
 
 
@@ -115,7 +117,7 @@ def create_block_header(hash_merkle_root, time, bits, nonce):
     Bytes("nonce", 4))
 
   genesisblock = block_header.parse('\x00'*80)
-  genesisblock.version          = struct.pack('<I', 1)
+  genesisblock.version          = struct.pack('<I', 3)
   genesisblock.hash_prev_block  = struct.pack('<qqqq', 0,0,0,0)
   genesisblock.hash_merkle_root = hash_merkle_root
   genesisblock.time             = struct.pack('<I', time)
